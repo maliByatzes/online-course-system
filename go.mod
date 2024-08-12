@@ -2,7 +2,10 @@ module github.com/maliByatzes/ocs
 
 go 1.22.5
 
-require github.com/prometheus/client_golang v1.19.1
+require (
+	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/prometheus/client_golang v1.19.1
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

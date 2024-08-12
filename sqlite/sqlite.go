@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/maliByatzes/ocs"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
