@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/maliByatzes/ocs"
@@ -77,7 +79,50 @@ func (db *DB) Open() (err error) {
 }
 
 func (db *DB) migrate() error {
+	if _, err := db.db.Exec(`CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);`); err != nil {
+		return fmt.Errorf("cannot create a migrations table: %w", err)
+	}
+
+	names, err := fs.Glob(migrationFS, "migration/*.sql")
+	if err != nil {
+		return err
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		if err := db.migrateFile(name); err != nil {
+			return fmt.Errorf("migration error: name=%q err=%w", name, err)
+		}
+	}
+
 	return nil
+}
+
+func (db *DB) migrateFile(name string) error {
+	tx, err := db.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var n int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM migrations WHERE name = ?`, name).Scan(&n); err != nil {
+		return err
+	} else if n != 0 {
+		return nil
+	}
+
+	if buf, err := fs.ReadFile(migrationFS, name); err != nil {
+		return err
+	} else if _, err := tx.Exec(string(buf)); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(`INSERT INTO migrations (name) VALUES (?)`, name); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (db *DB) monitor() {}
