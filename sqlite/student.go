@@ -83,7 +83,17 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id int, upd ocs.Stud
 }
 
 func (s *StudentService) DeleteStudent(ctx context.Context, id int) error {
-	return nil
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := deleteStudent(ctx, tx, id); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func createStudent(ctx context.Context, tx *Tx, student *ocs.Student) error {
@@ -240,6 +250,20 @@ func updateStudent(ctx context.Context, tx *Tx, id int, upd ocs.StudentUpdate) (
 	}
 
 	return student, nil
+}
+
+func deleteStudent(ctx context.Context, tx *Tx, id int) error {
+	if student, err := findStudentByID(ctx, tx, id); err != nil {
+		return err
+	} else if student.ID != ocs.StudentIDFromContext(ctx) {
+		return ocs.Errorf(ocs.EUNAUTHORIZED, "You are not allowed to delete this student.")
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM students WHERE id = ?`, id); err != nil {
+		return FormatError(err)
+	}
+
+	return nil
 }
 
 func attachStudentsAuths(ctx context.Context, tx *Tx, student *ocs.Student) (err error) {

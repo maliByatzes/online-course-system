@@ -116,6 +116,32 @@ func TestStudentService_UpdateStudent(t *testing.T) {
 	})
 }
 
+func TestStudentService_DeleteStudent(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewStudentService(db)
+
+		student0, ctx0 := MustCreateStudent(t, context.Background(), db, &ocs.Student{Name: "james", Email: "james@email.com"})
+
+		if err := s.DeleteStudent(ctx0, student0.ID); err != nil {
+			t.Fatal(err)
+		} else if _, err := s.FindStudentByID(ctx0, student0.ID); ocs.ErrorCode(err) != ocs.ENOTFOUND {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrNotFound", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewStudentService(db)
+
+		if err := s.DeleteStudent(context.Background(), 1); ocs.ErrorCode(err) != ocs.ENOTFOUND {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+}
+
 func TestStudentService_FindStudent(t *testing.T) {
 	t.Run("ErrNotFound", func(t *testing.T) {
 		db := MustOpenDB(t)
