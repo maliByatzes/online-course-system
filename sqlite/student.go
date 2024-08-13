@@ -2,7 +2,10 @@ package sqlite
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
+	"io"
 	"strings"
 
 	"github.com/maliByatzes/ocs"
@@ -40,7 +43,19 @@ func (s *StudentService) FindStudents(ctx context.Context, filter ocs.StudentFil
 }
 
 func (s *StudentService) CreateStudent(ctx context.Context, student *ocs.Student) error {
-	return nil
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := createStudent(ctx, tx, student); err != nil {
+		return err
+	} else if err := attachStudentsAuths(ctx, tx, student); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *StudentService) UpdateStudent(ctx context.Context, id int, upd ocs.StudentUpdate) (*ocs.Student, error) {
@@ -48,6 +63,55 @@ func (s *StudentService) UpdateStudent(ctx context.Context, id int, upd ocs.Stud
 }
 
 func (s *StudentService) DeleteStudent(ctx context.Context, id int) error {
+	return nil
+}
+
+func createStudent(ctx context.Context, tx *Tx, student *ocs.Student) error {
+	student.CreatedAt = tx.now
+	student.UpdatedAt = student.CreatedAt
+
+	if err := student.Validate(); err != nil {
+		return err
+	}
+
+	var email *string
+	if student.Email != "" {
+		email = &student.Email
+	}
+
+	apiKey := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, apiKey); err != nil {
+		return err
+	}
+	student.APIKey = hex.EncodeToString(apiKey)
+
+	result, err := tx.ExecContext(ctx, `
+    INSERT INTO students (
+      name,
+      email,
+      api_key,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?)
+  `,
+		student.Name,
+		*email,
+		student.APIKey,
+		(*NullTime)(&student.CreatedAt),
+		(*NullTime)(&student.UpdatedAt),
+	)
+
+	if err != nil {
+		return FormatError(err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	student.ID = int(id)
+
 	return nil
 }
 
@@ -83,7 +147,7 @@ func findStudents(ctx context.Context, tx *Tx, filter ocs.StudentFilter) (_ []*o
       updated_at,
       COUNT(*) OVER()
     FROM students
-    WHERE`+strings.Join(where, " AND ")+`
+    WHERE `+strings.Join(where, " AND ")+`
     ORDER BY id ASC
     `+FormatLimitOffset(filter.Limit, filter.Offset),
 		args...,

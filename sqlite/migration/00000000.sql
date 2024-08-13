@@ -1,7 +1,7 @@
 CREATE TABLE students (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT NOT NULL,
-  emailTEXT  UNIQUE,
+  email      TEXT  UNIQUE,
   api_key    TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
