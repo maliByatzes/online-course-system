@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"strings"
 
@@ -267,9 +268,8 @@ func deleteStudent(ctx context.Context, tx *Tx, id int) error {
 }
 
 func attachStudentsAuths(ctx context.Context, tx *Tx, student *ocs.Student) (err error) {
-	/*
-		if student.Auths, _, err = findAuths(ctx, tx, ocs.AuthFilter{StudentID: &student.ID}); err != nil {
-			return fmt.Errorf("attach student auths: %w", err)
-		}*/
+	if student.Auths, _, err = findAuths(ctx, tx, ocs.AuthFilter{StudentID: &student.ID}); err != nil {
+		return fmt.Errorf("attach student auths: %w", err)
+	}
 	return nil
 }
