@@ -33,7 +33,7 @@ func (s *Student) AvatarURL(size int) string {
 
 type StudentService interface {
 	FindStudentByID(ctx context.Context, id int) (*Student, error)
-	FindStudents(ctx context.Context, filter StudentFilter) ([]*Student, error)
+	FindStudents(ctx context.Context, filter StudentFilter) ([]*Student, int, error)
 	CreateStudent(ctx context.Context, student *Student) error
 	UpdateStudent(ctx context.Context, id int, upd StudentUpdate) (*Student, error)
 	DeleteStudent(ctx context.Context, id int) error

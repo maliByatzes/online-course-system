@@ -43,6 +43,28 @@ func TestStudentService_CreateStudent(t *testing.T) {
 			t.Fatalf("mismatch: %#v != %#v", student, other)
 		}
 	})
+
+	t.Run("ErrNameRequired", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewStudentService(db)
+		if err := s.CreateStudent(context.Background(), &ocs.Student{}); err == nil {
+			t.Fatal("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EINVALID || ocs.ErrorMessage(err) != `Provide required fields` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrEmailRequired", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewStudentService(db)
+		if err := s.CreateStudent(context.Background(), &ocs.Student{Name: "kyle"}); err == nil {
+			t.Fatalf("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EINVALID || ocs.ErrorMessage(err) != `Provide required fields` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
 }
 
 func TestStudentService_FindStudent(t *testing.T) {

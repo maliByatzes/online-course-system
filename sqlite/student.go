@@ -38,8 +38,13 @@ func (s *StudentService) FindStudentByID(ctx context.Context, id int) (*ocs.Stud
 	return student, nil
 }
 
-func (s *StudentService) FindStudents(ctx context.Context, filter ocs.StudentFilter) ([]*ocs.Student, error) {
-	return nil, nil
+func (s *StudentService) FindStudents(ctx context.Context, filter ocs.StudentFilter) ([]*ocs.Student, int, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback()
+	return findStudents(ctx, tx, filter)
 }
 
 func (s *StudentService) CreateStudent(ctx context.Context, student *ocs.Student) error {
