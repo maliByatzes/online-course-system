@@ -64,7 +64,22 @@ func (s *StudentService) CreateStudent(ctx context.Context, student *ocs.Student
 }
 
 func (s *StudentService) UpdateStudent(ctx context.Context, id int, upd ocs.StudentUpdate) (*ocs.Student, error) {
-	return nil, nil
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	student, err := updateStudent(ctx, tx, id, upd)
+	if err != nil {
+		return student, err
+	} else if err := attachStudentsAuths(ctx, tx, student); err != nil {
+		return student, err
+	} else if err := tx.Commit(); err != nil {
+		return student, err
+	}
+
+	return student, nil
 }
 
 func (s *StudentService) DeleteStudent(ctx context.Context, id int) error {
@@ -185,6 +200,46 @@ func findStudents(ctx context.Context, tx *Tx, filter ocs.StudentFilter) (_ []*o
 	}
 
 	return students, n, nil
+}
+
+func updateStudent(ctx context.Context, tx *Tx, id int, upd ocs.StudentUpdate) (*ocs.Student, error) {
+	student, err := findStudentByID(ctx, tx, id)
+	if err != nil {
+		return student, err
+	} else if student.ID != ocs.StudentIDFromContext(ctx) {
+		return nil, ocs.Errorf(ocs.EUNAUTHORIZED, "You are not allowed to update this student.")
+	}
+
+	if v := upd.Name; v != nil {
+		student.Name = *v
+	}
+
+	if v := upd.Email; v != nil {
+		student.Email = *v
+	}
+
+	student.UpdatedAt = tx.now
+
+	if err := student.Validate(); err != nil {
+		return student, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+    UPDATE students
+    SET name = ?,
+        email = ?,
+        updated_at = ?
+    WHERE id = ?
+    `,
+		student.Name,
+		student.Email,
+		(*NullTime)(&student.UpdatedAt),
+		id,
+	); err != nil {
+		return student, FormatError(err)
+	}
+
+	return student, nil
 }
 
 func attachStudentsAuths(ctx context.Context, tx *Tx, student *ocs.Student) (err error) {
