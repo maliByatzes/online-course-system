@@ -74,11 +74,6 @@ func createStudent(ctx context.Context, tx *Tx, student *ocs.Student) error {
 		return err
 	}
 
-	var email *string
-	if student.Email != "" {
-		email = &student.Email
-	}
-
 	apiKey := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, apiKey); err != nil {
 		return err
@@ -96,7 +91,7 @@ func createStudent(ctx context.Context, tx *Tx, student *ocs.Student) error {
     VALUES (?, ?, ?, ?, ?)
   `,
 		student.Name,
-		*email,
+		student.Email,
 		student.APIKey,
 		(*NullTime)(&student.CreatedAt),
 		(*NullTime)(&student.UpdatedAt),

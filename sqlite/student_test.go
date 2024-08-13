@@ -30,13 +30,12 @@ func TestStudentService_CreateStudent(t *testing.T) {
 			t.Fatal("expected updated at")
 		}
 
-    /*
-		student2 := &ocs.Student{Name: "james"}
+		student2 := &ocs.Student{Name: "james", Email: "james@email.com"}
 		if err := s.CreateStudent(context.Background(), student2); err != nil {
 			t.Fatal(err)
 		} else if got, want := student2.ID, 2; got != want {
 			t.Fatalf("ID=%v, want=%v", got, want)
-		}*/
+		}
 
 		if other, err := s.FindStudentByID(context.Background(), 1); err != nil {
 			t.Fatal(err)
