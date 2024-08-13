@@ -77,3 +77,36 @@ func TestStudentService_FindStudent(t *testing.T) {
 		}
 	})
 }
+
+func TestStudentService_FindStudents(t *testing.T) {
+	t.Run("Email", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewStudentService(db)
+
+		ctx := context.Background()
+		MustCreateStudent(t, ctx, db, &ocs.Student{Name: "john", Email: "john@email.com"})
+		MustCreateStudent(t, ctx, db, &ocs.Student{Name: "jane", Email: "jane@email.com"})
+		MustCreateStudent(t, ctx, db, &ocs.Student{Name: "frank", Email: "frank@email.com"})
+		MustCreateStudent(t, ctx, db, &ocs.Student{Name: "joe", Email: "joe@email.com"})
+
+		email := "joe@email.com"
+		if a, n, err := s.FindStudents(ctx, ocs.StudentFilter{Email: &email}); err != nil {
+			t.Fatal(err)
+		} else if got, want := len(a), 1; got != want {
+			t.Fatalf("len=%v, want %v", got, want)
+		} else if got, want := a[0].Name, "joe"; got != want {
+			t.Fatalf("name=%v, want %v", got, want)
+		} else if got, want := n, 1; got != want {
+			t.Fatalf("n=%v, want %v", got, want)
+		}
+	})
+}
+
+func MustCreateStudent(tb testing.TB, ctx context.Context, db *sqlite.DB, student *ocs.Student) (*ocs.Student, context.Context) {
+  tb.Helper()
+  if err := sqlite.NewStudentService(db).CreateStudent(ctx, student); err != nil {
+    tb.Fatal(err)
+  }
+  return student, ocs.NewContextWithStudent(ctx, student)
+}
