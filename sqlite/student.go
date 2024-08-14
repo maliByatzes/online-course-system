@@ -151,6 +151,16 @@ func findStudentByID(ctx context.Context, tx *Tx, id int) (*ocs.Student, error) 
 	return a[0], nil
 }
 
+func findStudentByEmail(ctx context.Context, tx *Tx, email string) (*ocs.Student, error) {
+	a, _, err := findStudents(ctx, tx, ocs.StudentFilter{Email: &email})
+	if err != nil {
+		return nil, err
+	} else if len(a) == 0 {
+		return nil, &ocs.Error{Code: ocs.ENOTFOUND, Message: "Student not found"}
+	}
+	return a[0], nil
+}
+
 func findStudents(ctx context.Context, tx *Tx, filter ocs.StudentFilter) (_ []*ocs.Student, n int, err error) {
 	where, args := []string{"1 = 1"}, []interface{}{}
 	if v := filter.ID; v != nil {

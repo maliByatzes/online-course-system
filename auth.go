@@ -23,7 +23,7 @@ type Auth struct {
 	UpdatedAt    time.Time  `json:"updatedAt"`
 }
 
-func (a *Auth) Error() error {
+func (a *Auth) Validate() error {
 	if a.StudentID == 0 {
 		return Errorf(EINVALID, "Student required.")
 	} else if a.Source == "" {
