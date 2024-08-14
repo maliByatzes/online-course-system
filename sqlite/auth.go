@@ -37,8 +37,24 @@ func (a *AuthService) FindAuthByID(ctx context.Context, id int) (*ocs.Auth, erro
 	return auth, nil
 }
 
-func (a *AuthService) FindAuths(ctx context.Context, filter ocs.AuthFilter) ([]*ocs.Auth, error) {
-	return nil, nil
+func (a *AuthService) FindAuths(ctx context.Context, filter ocs.AuthFilter) ([]*ocs.Auth, int, error) {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback()
+
+	auths, n, err := findAuths(ctx, tx, filter)
+	if err != nil {
+		return auths, n, err
+	}
+
+	for _, auth := range auths {
+		if err := attachAuthAssociations(ctx, tx, auth); err != nil {
+			return auths, n, err
+		}
+	}
+	return auths, n, nil
 }
 
 func (a *AuthService) CreateAuth(ctx context.Context, auth *ocs.Auth) error {

@@ -47,7 +47,7 @@ func (a *Auth) AvatarURL(size int) string {
 
 type AuthService interface {
 	FindAuthByID(ctx context.Context, id int) (*Auth, error)
-	FindAuths(ctx context.Context, filter AuthFilter) ([]*Auth, error)
+	FindAuths(ctx context.Context, filter AuthFilter) ([]*Auth, int, error)
 	CreateAuth(ctx context.Context, auth *Auth) error
 	DeleteAuth(ctx context.Context, id int) error
 }
