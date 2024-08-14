@@ -82,7 +82,7 @@ func TestAuthService_CreateAuth(t *testing.T) {
 	t.Run("ErrAccessTokenRequired", func(t *testing.T) {
 		db := MustOpenDB(t)
 		defer MustCloseDB(t, db)
-    s := sqlite.NewAuthService(db)
+		s := sqlite.NewAuthService(db)
 		if err := s.CreateAuth(context.Background(), &ocs.Auth{
 			Source:   ocs.AuthSourceGithub,
 			SourceID: "X",
@@ -106,8 +106,63 @@ func TestAuthService_CreateAuth(t *testing.T) {
 	})
 }
 
+func TestAuthService_DeleteAuth(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewAuthService(db)
+		auth0, ctx0 := MustCreateAuth(t, context.Background(), db, &ocs.Auth{
+			Source:      ocs.AuthSourceGithub,
+			SourceID:    "X",
+			AccessToken: "X",
+			Student: &ocs.Student{
+				Name:  "X",
+				Email: "X@Y.COM",
+			},
+		})
+
+		if err := s.DeleteAuth(ctx0, auth0.ID); err != nil {
+			t.Fatal(err)
+		} else if _, err := s.FindAuthByID(ctx0, auth0.ID); ocs.ErrorCode(err) != ocs.ENOTFOUND {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrNotFound", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewAuthService(db)
+		if err := s.DeleteAuth(context.Background(), 1); ocs.ErrorCode(err) != ocs.ENOTFOUND {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrUnauthorized", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewAuthService(db)
+
+		auth0, _ := MustCreateAuth(t, context.Background(), db, &ocs.Auth{
+			Source:      ocs.AuthSourceGithub,
+			SourceID:    "X",
+			AccessToken: "X", Student: &ocs.Student{Name: "X", Email: "X@EMAIL.COM"},
+		})
+		_, ctx1 := MustCreateAuth(t, context.Background(), db, &ocs.Auth{
+			Source:      ocs.AuthSourceGithub,
+			SourceID:    "Y",
+			AccessToken: "Y", Student: &ocs.Student{Name: "Y", Email: "Y@EMAIL.COM"},
+		})
+
+		if err := s.DeleteAuth(ctx1, auth0.ID); err == nil {
+			t.Fatal("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EUNAUTHORIZED || ocs.ErrorMessage(err) != `You are not allowed to delete this auth.` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+}
+
 func TestAuthService_FindAuths(t *testing.T) {
-	t.Run("User", func(t *testing.T) {
+	t.Run("Student", func(t *testing.T) {
 		db := MustOpenDB(t)
 		defer MustCloseDB(t, db)
 		s := sqlite.NewAuthService(db)
