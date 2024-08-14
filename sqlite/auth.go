@@ -64,7 +64,7 @@ func (a *AuthService) CreateAuth(ctx context.Context, auth *ocs.Auth) error {
 	}
 	defer tx.Rollback()
 
-	if other, err := findAuthBySourceID(ctx, tx, auth.Source, auth.SourceID); err != nil {
+	if other, err := findAuthBySourceID(ctx, tx, auth.Source, auth.SourceID); err == nil {
 		if other, err := updateAuth(ctx, tx, other.ID, auth.AccessToken, auth.RefreshToken, auth.Expiry); err != nil {
 			return fmt.Errorf("cannot update auth: id=%d err=%w", other.ID, err)
 		} else if err := attachAuthAssociations(ctx, tx, other); err != nil {
@@ -80,7 +80,7 @@ func (a *AuthService) CreateAuth(ctx context.Context, auth *ocs.Auth) error {
 	if auth.StudentID == 0 && auth.Student != nil {
 		if student, err := findStudentByEmail(ctx, tx, auth.Student.Email); err == nil {
 			auth.Student = student
-		} else if ocs.ErrorCode(err) != ocs.ENOTFOUND {
+		} else if ocs.ErrorCode(err) == ocs.ENOTFOUND {
 			if err := createStudent(ctx, tx, auth.Student); err != nil {
 				return fmt.Errorf("cannot create student: %w", err)
 			}
