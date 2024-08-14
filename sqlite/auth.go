@@ -101,7 +101,16 @@ func (a *AuthService) CreateAuth(ctx context.Context, auth *ocs.Auth) error {
 }
 
 func (a *AuthService) DeleteAuth(ctx context.Context, id int) error {
-	return nil
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := deleteAuth(ctx, tx, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func createAuth(ctx context.Context, tx *Tx, auth *ocs.Auth) error {
@@ -286,6 +295,20 @@ func updateAuth(ctx context.Context, tx *Tx, id int, accessToken, refreshToken s
 	}
 
 	return auth, nil
+}
+
+func deleteAuth(ctx context.Context, tx *Tx, id int) error {
+	if auth, err := findAuthByID(ctx, tx, id); err != nil {
+		return err
+	} else if auth.StudentID != ocs.StudentIDFromContext(ctx) {
+		return ocs.Errorf(ocs.EUNAUTHORIZED, "You are not allowed to delete this auth.")
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM auths WHERE id = ?`, id); err != nil {
+		return FormatError(err)
+	}
+
+	return nil
 }
 
 func attachAuthAssociations(ctx context.Context, tx *Tx, auth *ocs.Auth) (err error) {

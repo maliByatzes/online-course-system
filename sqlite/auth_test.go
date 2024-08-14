@@ -2,11 +2,109 @@ package sqlite_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/maliByatzes/ocs"
 	"github.com/maliByatzes/ocs/sqlite"
 )
+
+func TestAuthService_CreateAuth(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewAuthService(db)
+
+		expiry := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+		auth := &ocs.Auth{
+			Source:       ocs.AuthSourceGithub,
+			SourceID:     "SOURCEID",
+			AccessToken:  "ACCESS",
+			RefreshToken: "REFRESH",
+			Expiry:       &expiry,
+			Student: &ocs.Student{
+				Name:  "jeff",
+				Email: "jeff@email.com",
+			},
+		}
+
+		if err := s.CreateAuth(context.Background(), auth); err != nil {
+			t.Fatal(err)
+		} else if got, want := auth.ID, 1; got != want {
+			t.Fatalf("ID=%v, want %v", got, want)
+		} else if auth.CreatedAt.IsZero() {
+			t.Fatal("expected created at")
+		} else if auth.UpdatedAt.IsZero() {
+			t.Fatal("expected updated at")
+		}
+
+		if other, err := s.FindAuthByID(context.Background(), 1); err != nil {
+			t.Fatal(err)
+		} else if !reflect.DeepEqual(other, auth) {
+			t.Fatalf("mismatch: %#v != %#v", auth, other)
+		}
+
+		if student, err := sqlite.NewStudentService(db).FindStudentByID(context.Background(), 1); err != nil {
+			t.Fatal(err)
+		} else if len(student.Auths) != 1 {
+			t.Fatal("expected auths")
+		} else if auth := student.Auths[0]; auth.ID != 1 {
+			t.Fatalf("unexpected auth: %#v", auth)
+		}
+	})
+
+	t.Run("ErrSourceRequired", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		if err := sqlite.NewAuthService(db).CreateAuth(context.Background(), &ocs.Auth{
+			Student: &ocs.Student{Name: "NAME", Email: "NAME@EMAIL.COM"},
+		}); err == nil {
+			t.Fatal("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EINVALID || ocs.ErrorMessage(err) != `Source required.` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrSourceIDRequired", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		if err := sqlite.NewAuthService(db).CreateAuth(context.Background(), &ocs.Auth{
+			Source:  ocs.AuthSourceGithub,
+			Student: &ocs.Student{Name: "NAME", Email: "NAME@EMAIL.COM"},
+		}); err == nil {
+			t.Fatal("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EINVALID || ocs.ErrorMessage(err) != `Source ID required.` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrAccessTokenRequired", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+    s := sqlite.NewAuthService(db)
+		if err := s.CreateAuth(context.Background(), &ocs.Auth{
+			Source:   ocs.AuthSourceGithub,
+			SourceID: "X",
+			Student:  &ocs.Student{Name: "NAME", Email: "NAME@EMAIL.COM"},
+		}); err == nil {
+			t.Fatal("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EINVALID || ocs.ErrorMessage(err) != `Access Token required.` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+
+	t.Run("ErrStudentRequired", func(t *testing.T) {
+		db := MustOpenDB(t)
+		defer MustCloseDB(t, db)
+		s := sqlite.NewAuthService(db)
+		if err := s.CreateAuth(context.Background(), &ocs.Auth{}); err == nil {
+			t.Fatal("expected error")
+		} else if ocs.ErrorCode(err) != ocs.EINVALID || ocs.ErrorMessage(err) != `Student required.` {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	})
+}
 
 func TestAuthService_FindAuths(t *testing.T) {
 	t.Run("User", func(t *testing.T) {
