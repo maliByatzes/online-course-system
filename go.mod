@@ -3,6 +3,8 @@ module github.com/maliByatzes/ocs
 go 1.22.5
 
 require (
+	github.com/gorilla/mux v1.8.1
+	github.com/gorilla/securecookie v1.1.2
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/prometheus/client_golang v1.19.1
 )
