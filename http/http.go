@@ -44,10 +44,10 @@ func (c *Client) newRequest(ctx context.Context, method, url string, body io.Rea
 	return req, nil
 }
 
-const sessionCookieName = "cookie"
+const SessionCookieName = "cookie"
 
 type Session struct {
-	studentID   int    `json:"studentID"`
+	StudentID   int    `json:"studentID"`
 	RedirectURL string `json:"redirectURL"`
 	State       string `json:"state"`
 }
