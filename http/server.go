@@ -49,6 +49,7 @@ type Server struct {
 	GithubClientID     string
 	GithubClientSecret string
 	AuthService        ocs.AuthService
+	EventService       ocs.EventService
 	StudentService     ocs.StudentService
 }
 
