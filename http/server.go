@@ -73,14 +73,14 @@ func NewServer() *Server {
 	{
 		r := router.PathPrefix("/").Subrouter()
 		r.Use(s.requireNoAuth)
-		// s.registerAuthRoutes(r)
+		s.registerAuthRoutes(r)
 	}
 
 	// Auth routes
 	{
 		r := router.PathPrefix("/").Subrouter()
 		r.Use(s.requireAuth)
-		//s.registerEventRoutes(r)
+		s.registerEventRoutes(r)
 	}
 
 	return s
@@ -240,17 +240,8 @@ func (s *Server) authenticate(next http.Handler) http.Handler {
 func (s *Server) requireNoAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if studentID := ocs.StudentIDFromContext(r.Context()); studentID != 0 {
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusFound)
-			data, err := json.Marshal(struct {
-				message string
-			}{
-				message: "Student is already logged in.",
-			})
-			if err != nil {
-				log.Printf("http: cannot marshal data: %s", err)
-			}
-			w.Write(data)
+			sendJsonResponseMessage(w, "Student is already logged in.")
 			return
 		}
 
@@ -274,17 +265,8 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			log.Printf("http: cannot set session: %s", err)
 		}
 
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusFound)
-		data, err := json.Marshal(struct {
-			error string
-		}{
-			error: "You are not logged in",
-		})
-		if err != nil {
-			log.Printf("http: cannot marshal json: %s", err)
-		}
-		w.Write(data)
+		sendJsonResponseError(w, "You are not logged in.")
 		// http.Redirect(w, r, "/login", http.StatusFound)
 	})
 }
@@ -376,4 +358,30 @@ func ListenAndServeDebug() error {
 	h := http.NewServeMux()
 	h.Handle("/metrics", promhttp.Handler())
 	return http.ListenAndServe(":6060", h)
+}
+
+func sendJsonResponseMessage(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	data, err := json.Marshal(struct {
+		message string
+	}{
+		message: message,
+	})
+	if err != nil {
+		log.Printf("http: cannot marshal data: %s", err)
+	}
+	w.Write(data)
+}
+
+func sendJsonResponseError(w http.ResponseWriter, error string) {
+	w.Header().Set("Content-Type", "application/json")
+	data, err := json.Marshal(struct {
+		error string
+	}{
+		error: error,
+	})
+	if err != nil {
+		log.Printf("http: cannot marshal data: %s", err)
+	}
+	w.Write(data)
 }
