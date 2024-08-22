@@ -63,8 +63,6 @@ func NewServer() *Server {
 	s.server.Handler = http.HandlerFunc(s.serveHTTP)
 	s.router.NotFoundHandler = http.HandlerFunc(s.handleNotFound)
 
-	// skip asset serving
-
 	s.router.HandleFunc("/debug/version", s.handleVersion).Methods("GET")
 	s.router.HandleFunc("/debug/commit", s.handleCommit).Methods("GET")
 
